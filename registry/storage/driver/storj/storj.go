@@ -23,6 +23,7 @@ import (
 
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/base"
+	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
 )
 
 const driverName = "storj"
@@ -90,15 +91,15 @@ func init() {
 	// 	validObjectACLs[objectACL] = struct{}{}
 	// }
 
-	// // Register this as the default s3 driver in addition to s3aws
-	// factory.Register("s3", &s3DriverFactory{})
-	// factory.Register(driverName, &s3DriverFactory{})
+	// Register this as the default s3 driver in addition to s3aws
+	factory.Register("storj", &storjDriverFactory{})
+	// factory.Register(driverName, &storjDriverFactory{})
 }
 
-// s3DriverFactory implements the factory.StorageDriverFactory interface
-type s3DriverFactory struct{}
+// storjDriverFactory implements the factory.StorageDriverFactory interface
+type storjDriverFactory struct{}
 
-func (factory *s3DriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+func (factory *storjDriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	return FromParameters(parameters)
 }
 
@@ -106,16 +107,6 @@ type driver struct {
 	AccessGrant *uplink.Access
 	Project     *uplink.Project
 	Bucket      string
-	// ChunkSize                   int64
-	// Encrypt                     bool
-	// KeyID                       string
-	// MultipartCopyChunkSize      int64
-	// MultipartCopyMaxConcurrency int64
-	// MultipartCopyThresholdSize  int64
-	// MultipartCombineSmallPart   bool
-	// RootDirectory               string
-	// StorageClass                string
-	// ObjectACL                   string
 }
 
 type baseEmbed struct {

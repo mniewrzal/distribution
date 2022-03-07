@@ -19,15 +19,9 @@ log:
         to:
           - errors@example.com
 storage:
-    delete:
-      enabled: true
-    cache:
-        blobdescriptor: inmemory
-    filesystem:
-        rootdirectory: /var/lib/registry
-    maintenance:
-        uploadpurging:
-            enabled: false
+  storj:
+    accessgrant: your access grant
+    bucket: your bucket
 http:
     addr: :5000
     debug:
