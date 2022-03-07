@@ -135,7 +135,7 @@ func (d *driver) GetContent(ctx context.Context, path string) (_ []byte, err err
 	defer func() {
 		download.Close()
 	}()
-	// TODO close download
+
 	data, err := ioutil.ReadAll(download)
 	if err != nil {
 		if errors.Is(err, uplink.ErrObjectNotFound) {
@@ -253,9 +253,9 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
 	fmt.Println("Stat", path)
-	if path == "\\" {
+	if path == "/" {
 		return storagedriver.FileInfoInternal{FileInfoFields: storagedriver.FileInfoFields{
-			Path:  "/",
+			Path:  path,
 			IsDir: true,
 		}}, nil
 	}
