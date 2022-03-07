@@ -28,72 +28,13 @@ import (
 
 const driverName = "storj"
 
-// // minChunkSize defines the minimum multipart upload chunk size
-// // S3 API requires multipart upload chunks to be at least 5MB
-// const minChunkSize = 5 << 20
-
-// // maxChunkSize defines the maximum multipart upload chunk size allowed by S3.
-// const maxChunkSize = 5 << 30
-
-// const defaultChunkSize = 2 * minChunkSize
-
-// const (
-// 	// defaultMultipartCopyChunkSize defines the default chunk size for all
-// 	// but the last Upload Part - Copy operation of a multipart copy.
-// 	// Empirically, 32 MB is optimal.
-// 	defaultMultipartCopyChunkSize = 32 << 20
-
-// 	// defaultMultipartCopyMaxConcurrency defines the default maximum number
-// 	// of concurrent Upload Part - Copy operations for a multipart copy.
-// 	defaultMultipartCopyMaxConcurrency = 100
-
-// 	// defaultMultipartCopyThresholdSize defines the default object size
-// 	// above which multipart copy will be used. (PUT Object - Copy is used
-// 	// for objects at or below this size.)  Empirically, 32 MB is optimal.
-// 	defaultMultipartCopyThresholdSize = 32 << 20
-// )
-
-// // listMax is the largest amount of objects you can request from S3 in a list call
-// const listMax = 1000
-
-// // noStorageClass defines the value to be used if storage class is not supported by the S3 endpoint
-// const noStorageClass = "NONE"
-
-// // validRegions maps known s3 region identifiers to region descriptors
-// var validRegions = map[string]struct{}{}
-
-// // validObjectACLs contains known s3 object Acls
-// var validObjectACLs = map[string]struct{}{}
-
-//DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
 	AccessGrant string
 	Bucket      string
 }
 
 func init() {
-	// partitions := endpoints.DefaultPartitions()
-	// for _, p := range partitions {
-	// 	for region := range p.Regions() {
-	// 		validRegions[region] = struct{}{}
-	// 	}
-	// }
-
-	// for _, objectACL := range []string{
-	// 	s3.ObjectCannedACLPrivate,
-	// 	s3.ObjectCannedACLPublicRead,
-	// 	s3.ObjectCannedACLPublicReadWrite,
-	// 	s3.ObjectCannedACLAuthenticatedRead,
-	// 	s3.ObjectCannedACLAwsExecRead,
-	// 	s3.ObjectCannedACLBucketOwnerRead,
-	// 	s3.ObjectCannedACLBucketOwnerFullControl,
-	// } {
-	// 	validObjectACLs[objectACL] = struct{}{}
-	// }
-
-	// Register this as the default s3 driver in addition to s3aws
 	factory.Register("storj", &storjDriverFactory{})
-	// factory.Register(driverName, &storjDriverFactory{})
 }
 
 // storjDriverFactory implements the factory.StorageDriverFactory interface
@@ -121,11 +62,8 @@ type Driver struct {
 
 // FromParameters constructs a new Driver with a given parameters map
 // Required parameters:
-// - accesskey
-// - secretkey
-// - region
+// - accessgrant
 // - bucket
-// - encrypt
 func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	accessGrant := parameters["accessgrant"]
 	if accessGrant == nil {
@@ -175,10 +113,6 @@ func New(params DriverParameters) (*Driver, error) {
 	}, nil
 }
 
-// func (d *driver) openProject(ctx context.Context) (*uplink.Project, error) {
-// 	return uplink.OpenProject(ctx, d.AccessGrant)
-// }
-
 // Implement the storagedriver.StorageDriver interface
 func (d *driver) Name() string {
 	return driverName
@@ -186,7 +120,7 @@ func (d *driver) Name() string {
 
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *driver) GetContent(ctx context.Context, path string) (_ []byte, err error) {
-
+	fmt.Println("GetContent", path)
 	download, err := d.Project.DownloadObject(ctx, d.Bucket, storjPath(path), nil)
 	if err != nil {
 		if errors.Is(err, uplink.ErrObjectNotFound) {
@@ -217,6 +151,7 @@ func (d *driver) GetContent(ctx context.Context, path string) (_ []byte, err err
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
+	fmt.Println("PutContent", path)
 	upload, err := d.Project.UploadObject(ctx, d.Bucket, storjPath(path), nil)
 	if err != nil {
 		return err
@@ -240,6 +175,8 @@ func (d *driver) PutContent(ctx context.Context, path string, contents []byte) e
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
+	fmt.Println("Reader", path)
+
 	download, err := d.Project.DownloadObject(ctx, d.Bucket, storjPath(path), &uplink.DownloadOptions{
 		Offset: offset,
 		Length: -1,
@@ -264,6 +201,8 @@ func storjPath(path string) string {
 // Writer returns a FileWriter which will store the content written to it
 // at the location designated by "path" after the call to Commit.
 func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (storagedriver.FileWriter, error) {
+	fmt.Println("Writer", path)
+
 	key := storjPath(path)
 
 	var uploadID string
@@ -313,6 +252,13 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
+	fmt.Println("Stat", path)
+	if path == "\\" {
+		return storagedriver.FileInfoInternal{FileInfoFields: storagedriver.FileInfoFields{
+			Path:  "/",
+			IsDir: true,
+		}}, nil
+	}
 	// TODO we need to return stat for dirs
 	object, err := d.Project.StatObject(ctx, d.Bucket, storjPath(path))
 	if err != nil {
@@ -337,6 +283,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 
 // List returns a list of the objects that are direct descendants of the given path.
 func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
+	fmt.Println("List", opath)
 	path := opath
 	if path != "/" && path[len(path)-1] != '/' {
 		path = path + "/"
@@ -403,6 +350,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 // We must be careful since S3 does not guarantee read after delete consistency
 func (d *driver) Delete(ctx context.Context, path string) error {
+	fmt.Println("Delete", path)
 	iterator := d.Project.ListObjects(ctx, d.Bucket, &uplink.ListObjectsOptions{
 		Prefix:    storjPath(path) + "/",
 		Recursive: true,
@@ -449,6 +397,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 // Walk traverses a filesystem defined within driver, starting
 // from the given path, calling f on each file
 func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) error {
+	fmt.Println("Walk", from)
 	return nil
 }
 
