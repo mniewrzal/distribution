@@ -268,6 +268,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 				Path:       path,
 			}
 		}
+
 		return nil, err
 	}
 
@@ -411,6 +412,7 @@ type writer struct {
 	uploadID string
 	upload   *uplink.PartUpload
 	size     int64
+	partSize int64
 
 	closed    bool
 	committed bool
@@ -441,6 +443,7 @@ func (w *writer) Write(p []byte) (int, error) {
 
 	n, err := w.upload.Write(p)
 	w.size += int64(n)
+	w.partSize += int64(n)
 	if err != nil {
 		return n, err
 	}
@@ -466,18 +469,17 @@ func (w *writer) Cancel() error {
 }
 
 func (w *writer) Commit() error {
-	// if w.closed {
-	// 	return fmt.Errorf("already closed")
-	// } else
-	if w.committed {
+	if w.closed {
+		return fmt.Errorf("already closed")
+	} else if w.committed {
 		return fmt.Errorf("already committed")
 	} else if w.cancelled {
 		return fmt.Errorf("already cancelled")
 	}
 	w.committed = true
 
-	err := w.upload.Commit()
-	if err != nil && !errors.Is(err, uplink.ErrUploadDone) {
+	err := w.CommitPart()
+	if err != nil {
 		return err
 	}
 
@@ -486,10 +488,20 @@ func (w *writer) Commit() error {
 }
 
 func (w *writer) Close() error {
-	err := w.upload.Commit()
-	if err != nil && !errors.Is(err, uplink.ErrUploadDone) {
-		return err
+	if w.closed {
+		return fmt.Errorf("already closed")
 	}
+	w.closed = true
 
+	return w.CommitPart()
+}
+
+func (w *writer) CommitPart() error {
+	if w.partSize > 0 {
+		err := w.upload.Commit()
+		if err != nil && !errors.Is(err, uplink.ErrUploadDone) {
+			return err
+		}
+	}
 	return nil
 }
