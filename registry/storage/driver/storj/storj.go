@@ -387,6 +387,54 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 // Walk traverses a filesystem defined within driver, starting
 // from the given path, calling f on each file
 func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) error {
+	prefix := storjKey(from)
+
+	if prefix != "" {
+		prefix += "/"
+	}
+
+	return d.doWalk(ctx, prefix, f)
+}
+
+func (d *driver) doWalk(ctx context.Context, prefix string, f storagedriver.WalkFn) error {
+	storjPrefix := storjKey(prefix)
+
+	// TODO could we do this with single recursive request?
+	objects := d.project.ListObjects(ctx, d.bucket, &uplink.ListObjectsOptions{
+		Prefix: storjPrefix,
+	})
+
+	for objects.Next() {
+		item := objects.Item()
+
+		path := "/" + item.Key
+		path = strings.TrimRight(path, "/")
+
+		fileInfo := storagedriver.FileInfoInternal{FileInfoFields: storagedriver.FileInfoFields{
+			Path:    path,
+			Size:    item.System.ContentLength,
+			ModTime: item.System.Created,
+			IsDir:   item.IsPrefix,
+		}}
+		err := f(fileInfo)
+		if err != nil {
+			if err == storagedriver.ErrSkipDir {
+				continue
+			}
+			return err
+		}
+
+		if item.IsPrefix {
+			err = d.doWalk(ctx, item.Key, f)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if err := objects.Err(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
