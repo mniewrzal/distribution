@@ -421,17 +421,21 @@ func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) 
 	}
 	defer func() { err = errs.Combine(err, project.Close()) }()
 
-	prefix := storjKey(from)
-
-	if prefix != "" {
-		prefix += "/"
+	err = d.doWalk(ctx, project, from, f)
+	if errors.Is(err, errStop) {
+		return nil
 	}
-
-	return d.doWalk(ctx, project, prefix, f)
+	return err
 }
+
+var errStop = errors.New("stop")
 
 func (d *driver) doWalk(ctx context.Context, project *uplink.Project, prefix string, f storagedriver.WalkFn) error {
 	storjPrefix := storjKey(prefix)
+
+	if storjPrefix != "" && storjPrefix[len(storjPrefix)-1] != '/' {
+		storjPrefix = storjPrefix + "/"
+	}
 
 	// TODO could we do this with single recursive request?
 	objects := project.ListObjects(ctx, d.bucket, &uplink.ListObjectsOptions{
@@ -451,7 +455,11 @@ func (d *driver) doWalk(ctx context.Context, project *uplink.Project, prefix str
 		err := f(fileInfo)
 		if err != nil {
 			if err == storagedriver.ErrSkipDir {
-				continue
+				if item.IsPrefix {
+					continue
+				} else {
+					return errStop
+				}
 			}
 			return err
 		}
