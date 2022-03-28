@@ -20,8 +20,8 @@ log:
           - errors@example.com
 storage:
   storj:
-    accessgrant: your access grant
-    bucket: your bucket
+    accessgrant: 18HGwKU1orAUgzJkm5KMELWgtrL75KZ4WvyvLB6byXhSHUrTieGqBERcFWbCZZF6FJzCfwTzVEo4kH7CU24GLMzvpsLvZ3Gv8Q3bJBW9nXgYLMvDoKVzFD8Fys3dRGQCDV7wjnzcyAUxP215Spf68Y1Sp28CFRqNGwRmGKC7v3Am1UxgktXvzxTASkmJyvYYMeRfFDJEwjb46Ddk75Zq3zAajjkkbLyvms2iAF8tCwf2Xk1ocRR8hDpSBKg9
+    bucket: michal
 http:
     addr: :5000
     debug:
