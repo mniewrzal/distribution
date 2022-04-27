@@ -1,5 +1,8 @@
 // Package storj provides a storagedriver.StorageDriver implementation to
 // store blobs in Storj DCS decentralized storage.
+//
+// This package leverages the storj.io/uplink client library
+// for interfacing with Storj DCS.
 package storj
 
 import (
@@ -330,8 +333,7 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 	return names, nil
 }
 
-// Move moves an object stored at sourcePath to destPath, removing the original
-// object.
+// Move moves an object stored at sourcePath to destPath, removing the original object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
 	project, err := d.openProject(ctx)
 	if err != nil {
@@ -421,16 +423,11 @@ func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) 
 	}
 	defer func() { err = errs.Combine(err, project.Close()) }()
 
-	err = d.doWalk(ctx, project, from, f)
-	if errors.Is(err, errStop) {
-		return nil
-	}
+	_, err = d.doWalk(ctx, project, from, f)
 	return err
 }
 
-var errStop = errors.New("stop")
-
-func (d *driver) doWalk(ctx context.Context, project *uplink.Project, prefix string, f storagedriver.WalkFn) error {
+func (d *driver) doWalk(ctx context.Context, project *uplink.Project, prefix string, f storagedriver.WalkFn) (stop bool, err error) {
 	storjPrefix := storjKey(prefix)
 
 	if storjPrefix != "" && storjPrefix[len(storjPrefix)-1] != '/' {
@@ -458,27 +455,25 @@ func (d *driver) doWalk(ctx context.Context, project *uplink.Project, prefix str
 				if item.IsPrefix {
 					continue
 				} else {
-					return errStop
+					return true, nil
 				}
 			}
-			return err
+			return true, err
 		}
 
 		if item.IsPrefix {
-			err = d.doWalk(ctx, project, item.Key, f)
+			stop, err = d.doWalk(ctx, project, item.Key, f)
 			if err != nil {
-				return err
+				return stop, err
 			}
 		}
 	}
 	if err := objects.Err(); err != nil {
-		return err
+		return true, err
 	}
 
-	return nil
+	return false, nil
 }
-
-// TODO should we buffer data written to 'writer'?
 
 type writer struct {
 	ctx     context.Context

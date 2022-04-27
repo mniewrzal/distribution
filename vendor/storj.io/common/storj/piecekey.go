@@ -161,3 +161,18 @@ func (key *PiecePrivateKey) Scan(src interface{}) (err error) {
 	*key = n
 	return err
 }
+
+// MarshalText serializes a piece public key to a base32 string.
+func (key *PiecePublicKey) MarshalText() ([]byte, error) {
+	text := base32Encoding.EncodeToString(key.Bytes())
+	return []byte(text), nil
+}
+
+// UnmarshalText deserializes a base32 string to a piece public key.
+func (key *PiecePublicKey) UnmarshalText(data []byte) error {
+	bytes, err := base32Encoding.DecodeString(string(data))
+	if err != nil {
+		return err
+	}
+	return key.Unmarshal(bytes)
+}

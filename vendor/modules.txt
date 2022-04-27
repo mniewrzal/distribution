@@ -195,7 +195,7 @@ github.com/yvasiyarov/gorelic
 # github.com/yvasiyarov/newrelic_platform_go v0.0.0-20140908184405-b21fdbd4370f
 ## explicit
 github.com/yvasiyarov/newrelic_platform_go
-# github.com/zeebo/errs v1.2.2
+# github.com/zeebo/errs v1.3.0
 ## explicit
 github.com/zeebo/errs
 # golang.org/x/crypto v0.0.0-20220131195533-30dcbda58838
@@ -310,7 +310,7 @@ gopkg.in/check.v1
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit
 gopkg.in/yaml.v2
-# storj.io/common v0.0.0-20220223161334-302b968d0f29
+# storj.io/common v0.0.0-20220405183405-ffdc3ab808c6
 storj.io/common/base58
 storj.io/common/context2
 storj.io/common/encryption
@@ -343,7 +343,7 @@ storj.io/common/sync2
 storj.io/common/useragent
 storj.io/common/uuid
 storj.io/common/version
-# storj.io/drpc v0.0.29
+# storj.io/drpc v0.0.30
 storj.io/drpc
 storj.io/drpc/drpcconn
 storj.io/drpc/drpcctx
@@ -357,7 +357,7 @@ storj.io/drpc/drpcsignal
 storj.io/drpc/drpcstream
 storj.io/drpc/drpcwire
 storj.io/drpc/internal/drpcopts
-# storj.io/uplink v1.8.1-0.20220228101338-b836b1428ceb
+# storj.io/uplink v1.8.2
 ## explicit
 storj.io/uplink
 storj.io/uplink/internal/telemetryclient

@@ -25,9 +25,6 @@ func init() {
 	accessGrant := os.Getenv("STORJ_ACCESS_GRANT")
 	bucket := os.Getenv("STORJ_BUCKET")
 
-	accessGrant = "18HGwKU1orAUgzJkm5KMELWgtrL75KZ4WvyvLB6byXhSHUrTieGqBERcFWbCZZF6FJzCfwTzVEo4kH7CU24GLMzvpsLvZ3Gv8Q3bJBW9nXgYLMvDoKVzFD8Fys3dRGQCDV7wjnzcyAUxP215Spf68Y1Sp28CFRqNGwRmGKC7v3Am1UxgktXvzxTASkmJyvYYMeRfFDJEwjb46Ddk75Zq3zAajjkkbLyvms2iAF8tCwf2Xk1ocRR8hDpSBKg9"
-	bucket = "michal"
-
 	storjDriverConstructor = func() (*Driver, error) {
 		parameters := DriverParameters{
 			accessGrant,
@@ -37,7 +34,7 @@ func init() {
 		return New(parameters)
 	}
 
-	// Skip S3 storage driver tests if environment variable parameters are not provided
+	// Skip Storj storage driver tests if environment variable parameters are not provided
 	skipStorj = func() string {
 		if accessGrant == "" || bucket == "" {
 			return "Must set STORJ_ACCESS_GRANT and STORJ_BUCKET to run Storj tests"
