@@ -137,6 +137,9 @@ func (ec *ecClient) put(ctx context.Context, limits []*pb.AddressedOrderLimit, p
 	successfulNodes = make([]*pb.Node, pieceCount)
 	successfulHashes = make([]*pb.PieceHash, pieceCount)
 	var successfulCount, failureCount, cancellationCount int32
+
+	// all the piece upload errors, combined
+	var pieceErrors errs.Group
 	for range limits {
 		info := <-infos
 
@@ -145,6 +148,7 @@ func (ec *ecClient) put(ctx context.Context, limits []*pb.AddressedOrderLimit, p
 		}
 
 		if info.err != nil {
+			pieceErrors.Add(info.err)
 			if !errs2.IsCanceled(info.err) {
 				failureCount++
 			} else {
@@ -183,11 +187,11 @@ func (ec *ecClient) put(ctx context.Context, limits []*pb.AddressedOrderLimit, p
 	mon.IntVal("put_segment_pieces_canceled").Observe(int64(cancellationCount))
 
 	if int(successfulCount) <= rs.RepairThreshold() && int(successfulCount) < rs.OptimalThreshold() {
-		return nil, nil, Error.New("successful puts (%d) less than or equal to repair threshold (%d)", successfulCount, rs.RepairThreshold())
+		return nil, nil, Error.New("successful puts (%d) less than or equal to repair threshold (%d), %w", successfulCount, rs.RepairThreshold(), pieceErrors.Err())
 	}
 
 	if int(successfulCount) < rs.OptimalThreshold() {
-		return nil, nil, Error.New("successful puts (%d) less than success threshold (%d)", successfulCount, rs.OptimalThreshold())
+		return nil, nil, Error.New("successful puts (%d) less than success threshold (%d), %w", successfulCount, rs.OptimalThreshold(), pieceErrors.Err())
 	}
 
 	return successfulNodes, successfulHashes, nil
@@ -216,12 +220,6 @@ func (ec *ecClient) PutPiece(ctx, parent context.Context, limit *pb.AddressedOrd
 	}
 	defer func() { err = errs.Combine(err, ps.Close()) }()
 
-	peerID, err = ps.GetPeerIdentity()
-	if err != nil {
-		err = Error.New("failed getting peer identity (node:%v): %w", storageNodeID, err)
-		return nil, nil, err
-	}
-
 	hash, err = ps.UploadReader(ctx, limit.GetLimit(), privateKey, data)
 	if err != nil {
 		if errors.Is(ctx.Err(), context.Canceled) {
@@ -244,6 +242,12 @@ func (ec *ecClient) PutPiece(ctx, parent context.Context, limit *pb.AddressedOrd
 			err = Error.New("upload failed (node:%v, address:%v): %w", storageNodeID, nodeAddress, err)
 		}
 
+		return nil, nil, err
+	}
+
+	peerID, err = ps.GetPeerIdentity()
+	if err != nil {
+		err = Error.New("failed getting peer identity (node:%v): %w", storageNodeID, err)
 		return nil, nil, err
 	}
 
